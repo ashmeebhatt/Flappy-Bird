@@ -1,0 +1,333 @@
+<html>
+<head>
+<title>main.cpp</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style type="text/css">
+.s0 { color: #9e880d;}
+.s1 { color: #080808;}
+.s2 { color: #067d17;}
+.s3 { color: #0033b3;}
+.s4 { color: #1750eb;}
+</style>
+</head>
+<body bgcolor="#ffffff">
+<table CELLSPACING=0 CELLPADDING=5 COLS=1 WIDTH="100%" BGCOLOR="#c0c0c0" >
+<tr><td><center>
+<font face="Arial, Helvetica" color="#000000">
+main.cpp</font>
+</center></td></tr></table>
+<pre><span class="s0">#include </span><span class="s2">&lt;SFML/Graphics.hpp&gt;</span>
+<span class="s0">#include </span><span class="s2">&lt;vector&gt;</span>
+<span class="s0">#include </span><span class="s2">&lt;iostream&gt;</span>
+
+<span class="s3">using namespace </span><span class="s1">std;</span>
+
+<span class="s3">int </span><span class="s1">score;</span>
+<span class="s3">bool </span><span class="s1">gameRunning, gameOvered;</span>
+<span class="s3">float </span><span class="s1">delta;</span>
+<span class="s1">sf::RenderWindow *window;</span>
+
+<span class="s1">sf::Texture *backgroundTexture;</span>
+<span class="s1">sf::Texture *getReadyTexture;</span>
+
+<span class="s3">class </span><span class="s1">Bird {</span>
+<span class="s3">private</span><span class="s1">:</span>
+    <span class="s1">sf::Texture *texture;</span>
+    <span class="s3">float </span><span class="s1">y;</span>
+    <span class="s3">float </span><span class="s1">vel;</span>
+    <span class="s3">float </span><span class="s1">currentFrame{};</span>
+    <span class="s1">sf::Clock* animationClock;</span>
+    <span class="s1">vector&lt;sf::Texture*&gt; frames;</span>
+
+<span class="s3">public</span><span class="s1">:</span>
+    <span class="s1">Bird() {</span>
+        <span class="s1">animationClock = </span><span class="s3">new </span><span class="s1">sf::Clock;</span>
+
+        <span class="s3">for </span><span class="s1">(</span><span class="s3">const auto</span><span class="s1">&amp; path : {</span>
+                <span class="s2">&quot;res/textures/bird/1-2.png&quot;</span><span class="s1">,</span>
+                <span class="s2">&quot;res/textures/bird/1-3.png&quot;</span><span class="s1">,</span>
+                <span class="s2">&quot;res/textures/bird/1-2.png&quot;</span><span class="s1">,</span>
+                <span class="s2">&quot;res/textures/bird/1-1.png&quot;</span><span class="s1">,</span>
+        <span class="s1">}) {</span>
+            <span class="s3">auto </span><span class="s1">frame = </span><span class="s3">new </span><span class="s1">sf::Texture();</span>
+            <span class="s1">frame-&gt;loadFromFile(path);</span>
+            <span class="s1">frames.push_back(frame);</span>
+        <span class="s1">}</span>
+        <span class="s1">texture = frames[</span><span class="s4">0</span><span class="s1">];</span>
+
+        <span class="s1">y = </span><span class="s4">400</span><span class="s1">;</span>
+        <span class="s1">vel = </span><span class="s4">0</span><span class="s1">;</span>
+    <span class="s1">}</span>
+
+    <span class="s1">~Bird() {</span>
+        <span class="s3">for </span><span class="s1">(</span><span class="s3">const auto</span><span class="s1">&amp; ptr : frames) {</span>
+            <span class="s3">delete </span><span class="s1">ptr;</span>
+        <span class="s1">}</span>
+        <span class="s3">delete </span><span class="s1">animationClock;</span>
+    <span class="s1">}</span>
+
+    <span class="s1">sf::FloatRect getRect() {</span>
+        <span class="s3">auto </span><span class="s1">size = texture-&gt;getSize();</span>
+        <span class="s3">return </span><span class="s1">{</span>
+                <span class="s4">50</span><span class="s1">, y,</span>
+                <span class="s1">(</span><span class="s3">float</span><span class="s1">)size.x, (</span><span class="s3">float</span><span class="s1">)size.y</span>
+        <span class="s1">};</span>
+    <span class="s1">}</span>
+
+    <span class="s3">void </span><span class="s1">flap() {</span>
+        <span class="s3">if </span><span class="s1">(</span><span class="s3">not </span><span class="s1">gameRunning </span><span class="s3">or </span><span class="s1">gameOvered) </span><span class="s3">return</span><span class="s1">;</span>
+        <span class="s1">vel = -</span><span class="s4">420</span><span class="s1">;</span>
+
+
+    <span class="s1">}</span>
+
+    <span class="s3">void </span><span class="s1">draw() {</span>
+        <span class="s1">sf::Sprite birdSprite(*texture);</span>
+        <span class="s1">birdSprite.setRotation(</span><span class="s4">8</span><span class="s1">*(vel / </span><span class="s4">400</span><span class="s1">));</span>
+        <span class="s1">birdSprite.setPosition(</span><span class="s4">50</span><span class="s1">, y);</span>
+
+        <span class="s1">window-&gt;draw(birdSprite);</span>
+    <span class="s1">}</span>
+
+    <span class="s3">void </span><span class="s1">update() {</span>
+        <span class="s1">currentFrame += delta * </span><span class="s4">4</span><span class="s1">;</span>
+        <span class="s3">if </span><span class="s1">(currentFrame &gt; frames.size()) {</span>
+            <span class="s1">currentFrame -= frames.size();</span>
+        <span class="s1">}</span>
+        <span class="s1">texture = frames[(</span><span class="s3">int</span><span class="s1">)currentFrame];</span>
+        <span class="s3">if </span><span class="s1">(gameRunning) {</span>
+            <span class="s1">vel += delta * </span><span class="s4">1200</span><span class="s1">;</span>
+            <span class="s1">y += vel * delta;</span>
+
+            <span class="s3">if </span><span class="s1">(y &lt; </span><span class="s4">0 </span><span class="s3">or </span><span class="s1">y + texture-&gt;getSize().y &gt; backgroundTexture-&gt;getSize().y) {</span>
+                <span class="s1">gameOvered = </span><span class="s3">true</span><span class="s1">;</span>
+            <span class="s1">}</span>
+
+            <span class="s3">if </span><span class="s1">(y + texture-&gt;getSize().y &gt; backgroundTexture-&gt;getSize().y) {</span>
+                <span class="s1">y = (</span><span class="s3">float</span><span class="s1">)backgroundTexture-&gt;getSize().y - texture-&gt;getSize().y;</span>
+                <span class="s1">vel = </span><span class="s4">0</span><span class="s1">;</span>
+            <span class="s1">}</span>
+        <span class="s1">}</span>
+    <span class="s1">}</span>
+
+<span class="s1">};</span>
+<span class="s1">Bird *bird;</span>
+
+<span class="s1">sf::Texture* upperPipe;</span>
+<span class="s1">sf::Texture* lowerPipe;</span>
+<span class="s3">class </span><span class="s1">Pipe {</span>
+<span class="s3">private</span><span class="s1">:</span>
+    <span class="s3">float </span><span class="s1">x;</span>
+    <span class="s3">float </span><span class="s1">y;</span>
+    <span class="s3">bool </span><span class="s1">scored;</span>
+
+<span class="s3">public</span><span class="s1">:</span>
+    <span class="s1">Pipe() {</span>
+        <span class="s1">x = (</span><span class="s3">float</span><span class="s1">)(window-&gt;getSize().x + upperPipe-&gt;getSize().x);</span>
+        <span class="s1">y = </span><span class="s4">100.0f </span><span class="s1">+ (</span><span class="s3">float</span><span class="s1">)(rand()%</span><span class="s4">5 </span><span class="s1">- </span><span class="s4">3</span><span class="s1">) * </span><span class="s4">50</span><span class="s1">;</span>
+        <span class="s1">scored = </span><span class="s3">false</span><span class="s1">;</span>
+    <span class="s1">}</span>
+
+    <span class="s1">sf::FloatRect getUpperRect() </span><span class="s3">const </span><span class="s1">{</span>
+        <span class="s3">auto </span><span class="s1">size = upperPipe-&gt;getSize();</span>
+        <span class="s3">return </span><span class="s1">{</span>
+                <span class="s1">x, y + </span><span class="s4">340</span><span class="s1">,</span>
+                <span class="s1">(</span><span class="s3">float</span><span class="s1">)size.x, (</span><span class="s3">float</span><span class="s1">)size.y</span>
+        <span class="s1">};</span>
+    <span class="s1">}</span>
+
+    <span class="s1">sf::FloatRect getLowerRect() </span><span class="s3">const </span><span class="s1">{</span>
+        <span class="s3">auto </span><span class="s1">size = upperPipe-&gt;getSize();</span>
+        <span class="s3">return </span><span class="s1">{</span>
+                <span class="s1">x, y - </span><span class="s4">340</span><span class="s1">,</span>
+                <span class="s1">(</span><span class="s3">float</span><span class="s1">)size.x, (</span><span class="s3">float</span><span class="s1">)size.y</span>
+        <span class="s1">};</span>
+    <span class="s1">}</span>
+
+    <span class="s3">void </span><span class="s1">draw() </span><span class="s3">const </span><span class="s1">{</span>
+        <span class="s1">sf::Sprite upperSprite(*upperPipe);</span>
+        <span class="s1">upperSprite.setPosition(x, y+</span><span class="s4">340</span><span class="s1">);</span>
+        <span class="s1">sf::Sprite lowerSprite(*lowerPipe);</span>
+        <span class="s1">lowerSprite.setPosition(x, y-</span><span class="s4">340</span><span class="s1">);</span>
+
+        <span class="s1">window-&gt;draw(upperSprite);</span>
+        <span class="s1">window-&gt;draw(lowerSprite);</span>
+    <span class="s1">}</span>
+
+    <span class="s3">void </span><span class="s1">update() {</span>
+        <span class="s3">if </span><span class="s1">(</span><span class="s3">not </span><span class="s1">gameRunning </span><span class="s3">or </span><span class="s1">gameOvered) </span><span class="s3">return</span><span class="s1">;</span>
+
+        <span class="s1">x -= </span><span class="s4">100 </span><span class="s1">* delta;</span>
+        <span class="s3">auto </span><span class="s1">birdRect = bird-&gt;getRect();</span>
+
+        <span class="s3">if </span><span class="s1">(birdRect.intersects(getUpperRect()) </span><span class="s3">or </span><span class="s1">birdRect.intersects(getLowerRect())) {</span>
+            <span class="s1">gameOvered = </span><span class="s3">true</span><span class="s1">;</span>
+
+            <span class="s1">gameOvered = </span><span class="s3">new </span><span class="s1">sf::Texture();</span>
+            <span class="s1">sf::Image gameOverImage;</span>
+            <span class="s1">gameOverImage.loadFromFile(</span><span class="s2">&quot;res/textures/gameover.png&quot;</span><span class="s1">);</span>
+            <span class="s1">upperPipe-&gt;loadFromImage(gameOverImage);</span>
+
+
+
+        <span class="s1">}</span>
+
+        <span class="s3">if </span><span class="s1">(x + upperPipe-&gt;getSize().x &lt; birdRect.left </span><span class="s3">and not </span><span class="s1">scored) {</span>
+            <span class="s1">scored = </span><span class="s3">true</span><span class="s1">;</span>
+            <span class="s1">score++;</span>
+        <span class="s1">}</span>
+
+    <span class="s1">}</span>
+
+<span class="s1">};</span>
+<span class="s1">vector&lt;Pipe*&gt; pipes;</span>
+
+<span class="s1">sf::Texture *groundTexture;</span>
+<span class="s1">sf::Clock* pipeGeneratingClock;</span>
+
+
+<span class="s1">sf::Font* font;</span>
+<span class="s3">void </span><span class="s1">setup() {</span>
+
+
+    <span class="s1">srand((</span><span class="s3">unsigned int</span><span class="s1">) time (</span><span class="s3">nullptr</span><span class="s1">));</span>
+    <span class="s1">pipeGeneratingClock = </span><span class="s3">new </span><span class="s1">sf::Clock;</span>
+
+    <span class="s1">font = </span><span class="s3">new </span><span class="s1">sf::Font();</span>
+    <span class="s1">font-&gt;loadFromFile(</span><span class="s2">&quot;res/fonts/04B_19__.TTF&quot;</span><span class="s1">);</span>
+
+    <span class="s1">window = </span><span class="s3">new </span><span class="s1">sf::RenderWindow(sf::VideoMode(</span><span class="s4">450</span><span class="s1">, </span><span class="s4">700</span><span class="s1">), </span><span class="s2">&quot;Flappy Bird!&quot;</span><span class="s1">);</span>
+    <span class="s1">window-&gt;setPosition({-</span><span class="s4">1157</span><span class="s1">, </span><span class="s4">275</span><span class="s1">});</span>
+
+    <span class="s1">bird = </span><span class="s3">new </span><span class="s1">Bird();</span>
+
+    <span class="s1">backgroundTexture = </span><span class="s3">new </span><span class="s1">sf::Texture();</span>
+    <span class="s1">backgroundTexture-&gt;loadFromFile(</span><span class="s2">&quot;res/textures/background/day.png&quot;</span><span class="s1">);</span>
+
+    <span class="s1">getReadyTexture = </span><span class="s3">new </span><span class="s1">sf::Texture();</span>
+    <span class="s1">getReadyTexture-&gt;loadFromFile(</span><span class="s2">&quot;res/textures/get_ready/1.png&quot;</span><span class="s1">);</span>
+
+    <span class="s1">groundTexture = </span><span class="s3">new </span><span class="s1">sf::Texture();</span>
+    <span class="s1">groundTexture-&gt;loadFromFile(</span><span class="s2">&quot;res/textures/ground.png&quot;</span><span class="s1">);</span>
+
+    <span class="s1">upperPipe = </span><span class="s3">new </span><span class="s1">sf::Texture();</span>
+    <span class="s1">lowerPipe = </span><span class="s3">new </span><span class="s1">sf::Texture();</span>
+
+    <span class="s1">sf::Image pipeImage;</span>
+    <span class="s1">pipeImage.loadFromFile(</span><span class="s2">&quot;res/textures/pipe.png&quot;</span><span class="s1">);</span>
+    <span class="s1">upperPipe-&gt;loadFromImage(pipeImage);</span>
+    <span class="s1">pipeImage.flipVertically();</span>
+    <span class="s1">lowerPipe-&gt;loadFromImage(pipeImage);</span>
+
+<span class="s1">}</span>
+
+<span class="s3">void </span><span class="s1">destroy() {</span>
+    <span class="s3">delete </span><span class="s1">window;</span>
+    <span class="s3">delete </span><span class="s1">bird;</span>
+    <span class="s3">delete </span><span class="s1">backgroundTexture;</span>
+    <span class="s3">delete </span><span class="s1">pipeGeneratingClock;</span>
+    <span class="s3">delete </span><span class="s1">font;</span>
+<span class="s1">}</span>
+
+<span class="s3">void </span><span class="s1">update() {</span>
+    <span class="s1">bird-&gt;update();</span>
+    <span class="s3">for </span><span class="s1">(</span><span class="s3">const auto</span><span class="s1">&amp; pipe : pipes) {</span>
+        <span class="s1">pipe-&gt;update();</span>
+    <span class="s1">}</span>
+    <span class="s3">if </span><span class="s1">(gameRunning </span><span class="s3">and not </span><span class="s1">gameOvered) {</span>
+        <span class="s3">if </span><span class="s1">(pipeGeneratingClock-&gt;getElapsedTime().asSeconds() &gt; </span><span class="s4">3.5</span><span class="s1">) {</span>
+            <span class="s1">pipeGeneratingClock-&gt;restart();</span>
+            <span class="s1">pipes.push_back(</span><span class="s3">new </span><span class="s1">Pipe());</span>
+
+            <span class="s3">if </span><span class="s1">(pipes.size() &gt; </span><span class="s4">4</span><span class="s1">) {</span>
+                <span class="s3">delete </span><span class="s1">pipes[</span><span class="s4">0</span><span class="s1">];</span>
+                <span class="s1">pipes.erase(pipes.begin());</span>
+            <span class="s1">}</span>
+        <span class="s1">}</span>
+    <span class="s1">}</span>
+<span class="s1">}</span>
+
+<span class="s3">void </span><span class="s1">handleEvent(sf::Event &amp;event) {</span>
+    <span class="s3">if </span><span class="s1">(event.type == sf::Event::Closed) {</span>
+        <span class="s1">window-&gt;close();</span>
+    <span class="s1">}</span>
+    <span class="s3">if </span><span class="s1">(event.type == sf::Event::MouseButtonPressed) {</span>
+        <span class="s3">if </span><span class="s1">(</span><span class="s3">not </span><span class="s1">gameRunning) {</span>
+            <span class="s1">gameRunning = </span><span class="s3">true</span><span class="s1">;</span>
+            <span class="s1">pipeGeneratingClock-&gt;restart();</span>
+            <span class="s1">pipes.push_back(</span><span class="s3">new </span><span class="s1">Pipe());</span>
+        <span class="s1">}</span>
+        <span class="s1">bird-&gt;flap();</span>
+    <span class="s1">}</span>
+<span class="s1">}</span>
+
+<span class="s3">float </span><span class="s1">groundOffset;</span>
+
+
+<span class="s3">int </span><span class="s1">StartGame;</span>
+
+<span class="s3">void </span><span class="s1">draw() {</span>
+    <span class="s1">window-&gt;clear();</span>
+    <span class="s1">window-&gt;draw(sf::Sprite(*backgroundTexture));</span>
+
+    <span class="s3">for </span><span class="s1">(</span><span class="s3">const auto</span><span class="s1">&amp; pipe : pipes) {</span>
+        <span class="s1">pipe-&gt;draw();</span>
+    <span class="s1">}</span>
+
+    <span class="s1">sf::Sprite groundSprite(*groundTexture);</span>
+    <span class="s3">if </span><span class="s1">(</span><span class="s3">not </span><span class="s1">(</span><span class="s3">not </span><span class="s1">gameRunning </span><span class="s3">or </span><span class="s1">gameOvered)) {</span>
+        <span class="s1">groundOffset -= delta * </span><span class="s4">100</span><span class="s1">;</span>
+        <span class="s3">if </span><span class="s1">(groundOffset &lt;= -</span><span class="s4">24</span><span class="s1">) {</span>
+            <span class="s1">groundOffset += </span><span class="s4">24</span><span class="s1">;</span>
+        <span class="s1">}</span>
+    <span class="s1">}</span>
+    <span class="s1">groundSprite.setPosition(groundOffset, backgroundTexture-&gt;getSize().y);</span>
+    <span class="s1">window-&gt;draw(groundSprite);</span>
+
+    <span class="s1">sf::RectangleShape lowerRectangle({</span>
+                                              <span class="s1">(</span><span class="s3">float</span><span class="s1">) window-&gt;getSize().x,</span>
+                                              <span class="s1">(</span><span class="s3">float</span><span class="s1">) window-&gt;getSize().y - backgroundTexture-&gt;getSize().y - groundTexture-&gt;getSize().y</span>
+                                      <span class="s1">});</span>
+    <span class="s1">lowerRectangle.setPosition(</span><span class="s4">0</span><span class="s1">, (</span><span class="s3">float</span><span class="s1">)backgroundTexture-&gt;getSize().y + groundTexture-&gt;getSize().y);</span>
+    <span class="s1">lowerRectangle.setFillColor({</span><span class="s4">245</span><span class="s1">, </span><span class="s4">228</span><span class="s1">, </span><span class="s4">138</span><span class="s1">});</span>
+    <span class="s1">window-&gt;draw(lowerRectangle);</span>
+
+
+    <span class="s1">bird-&gt;draw();</span>
+
+    <span class="s1">sf::Text scoreText(</span><span class="s2">&quot;Score: &quot;</span><span class="s1">+to_string(score), *font);</span>
+    <span class="s1">scoreText.setPosition(window-&gt;getSize().x/</span><span class="s4">2</span><span class="s1">-scoreText.getLocalBounds().width/</span><span class="s4">2</span><span class="s1">, </span><span class="s4">5</span><span class="s1">);</span>
+    <span class="s1">window-&gt;draw(scoreText);</span>
+
+
+<span class="s1">}</span>
+
+<span class="s3">int </span><span class="s1">main() {</span>
+
+    <span class="s1">setup();</span>
+
+    <span class="s1">sf::Clock deltaClock;</span>
+
+    <span class="s3">while </span><span class="s1">(window-&gt;isOpen()) {</span>
+        <span class="s1">sf::Event event{};</span>
+
+        <span class="s3">while </span><span class="s1">(window-&gt;pollEvent(event)) {</span>
+            <span class="s1">handleEvent(event);</span>
+        <span class="s1">}</span>
+
+        <span class="s1">delta = deltaClock.getElapsedTime().asMicroseconds() / </span><span class="s4">1000.0f </span><span class="s1">/ </span><span class="s4">1000.0f</span><span class="s1">;</span>
+        <span class="s1">deltaClock.restart();</span>
+
+        <span class="s1">update();</span>
+        <span class="s1">draw();</span>
+
+        <span class="s1">window-&gt;display();</span>
+    <span class="s1">}</span>
+
+    <span class="s1">destroy();</span>
+
+    <span class="s3">return </span><span class="s1">EXIT_SUCCESS;</span>
+<span class="s1">}</span>
+</pre>
+</body>
+</html>
